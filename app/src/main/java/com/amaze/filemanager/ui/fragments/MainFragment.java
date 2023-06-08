@@ -156,7 +156,7 @@ public class MainFragment extends Fragment
 
   private RecyclerView listView;
   private UtilitiesProvider utilsProvider;
-  private HashMap<String, Bundle> scrolls = new HashMap<>();
+  private final HashMap<String, Bundle> scrolls = new HashMap<>();
   private View rootView;
   private FastScroller fastScroller;
   private CustomFileObserver customFileObserver;
@@ -391,7 +391,7 @@ public class MainFragment extends Fragment
     }
   }
 
-  private BroadcastReceiver receiver2 =
+  private final BroadcastReceiver receiver2 =
       new BroadcastReceiver() {
 
         @Override
@@ -406,7 +406,7 @@ public class MainFragment extends Fragment
         }
       };
 
-  private BroadcastReceiver decryptReceiver =
+  private final BroadcastReceiver decryptReceiver =
       new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
