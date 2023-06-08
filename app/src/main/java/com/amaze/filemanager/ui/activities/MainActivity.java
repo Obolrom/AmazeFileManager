@@ -2150,7 +2150,7 @@ public class MainActivity extends PermissionsActivity
   public void onPreExecute(String query) {
     executeWithMainFragment(
         mainFragment -> {
-          mainFragment.mSwipeRefreshLayout.setRefreshing(true);
+          mainFragment.getSwipeRefreshLayout().setRefreshing(true);
           mainFragment.onSearchPreExecute(query);
           return null;
         });
@@ -2165,7 +2165,7 @@ public class MainActivity extends PermissionsActivity
     }
 
     mainFragment.onSearchCompleted(query);
-    mainFragment.mSwipeRefreshLayout.setRefreshing(false);
+    mainFragment.getSwipeRefreshLayout().setRefreshing(false);
   }
 
   @Override
@@ -2188,7 +2188,7 @@ public class MainActivity extends PermissionsActivity
 
     mainFragment.reloadListElements(
         false, false, !mainFragment.getMainFragmentViewModel().isList());
-    mainFragment.mSwipeRefreshLayout.setRefreshing(false);
+    mainFragment.getSwipeRefreshLayout().setRefreshing(false);
   }
 
   @Override

@@ -31,13 +31,46 @@ import static com.amaze.filemanager.ui.fragments.preferencefragments.Preferences
 import static com.amaze.filemanager.ui.fragments.preferencefragments.PreferencesConstants.PREFERENCE_SHOW_HIDDENFILES;
 import static com.amaze.filemanager.ui.fragments.preferencefragments.PreferencesConstants.PREFERENCE_SHOW_THUMB;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.UriPermission;
+import android.graphics.Color;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.provider.DocumentsContract;
+import android.text.TextUtils;
+import android.text.format.Formatter;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.Toast;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
@@ -53,6 +86,7 @@ import com.amaze.filemanager.asynchronous.asynctasks.searchfilesystem.SortSearch
 import com.amaze.filemanager.asynchronous.handlers.FileHandler;
 import com.amaze.filemanager.database.SortHandler;
 import com.amaze.filemanager.database.models.explorer.Tab;
+import com.amaze.filemanager.databinding.MainFragBinding;
 import com.amaze.filemanager.fileoperations.filesystem.OpenMode;
 import com.amaze.filemanager.filesystem.CustomFileObserver;
 import com.amaze.filemanager.filesystem.FileProperties;
@@ -86,48 +120,13 @@ import com.amaze.filemanager.utils.OTGUtil;
 import com.amaze.filemanager.utils.Utils;
 import com.google.android.material.appbar.AppBarLayout;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
-import android.content.UriPermission;
-import android.graphics.Color;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.provider.DocumentsContract;
-import android.text.TextUtils;
-import android.text.format.Formatter;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import androidx.core.content.pm.ShortcutInfoCompat;
-import androidx.core.content.pm.ShortcutManagerCompat;
-import androidx.core.graphics.drawable.IconCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.preference.PreferenceManager;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
@@ -142,7 +141,7 @@ public class MainFragment extends Fragment
   private static final Logger LOG = LoggerFactory.getLogger(MainFragment.class);
   private static final String KEY_FRAGMENT_MAIN = "main";
 
-  public SwipeRefreshLayout mSwipeRefreshLayout;
+  private MainFragBinding binding = null;
 
   public RecyclerAdapter adapter;
   private SharedPreferences sharedPref;
@@ -152,9 +151,7 @@ public class MainFragment extends Fragment
   private GridLayoutManager mLayoutManagerGrid;
   private DividerItemDecoration dividerItemDecoration;
   private AppBarLayout mToolbarContainer;
-  private SwipeRefreshLayout nofilesview;
 
-  private RecyclerView listView;
   private UtilitiesProvider utilsProvider;
   private final HashMap<String, Bundle> scrolls = new HashMap<>();
   private View rootView;
@@ -210,8 +207,9 @@ public class MainFragment extends Fragment
 
   @Override
   public View onCreateView(
-      LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-    rootView = inflater.inflate(R.layout.main_frag, container, false);
+          @NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    binding = MainFragBinding.inflate(inflater);
+    rootView = binding.getRoot();
     return rootView;
   }
 
@@ -220,7 +218,6 @@ public class MainFragment extends Fragment
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     mainFragmentViewModel = new ViewModelProvider(this).get(MainFragmentViewModel.class);
-    listView = rootView.findViewById(R.id.listView);
     mToolbarContainer = requireMainActivity().getAppbar().getAppbarLayout();
     fastScroller = rootView.findViewById(R.id.fastscroll);
     fastScroller.setPressedHandleColor(mainFragmentViewModel.getAccentColor());
@@ -232,13 +229,11 @@ public class MainFragment extends Fragment
           }
           return false;
         };
-    listView.setOnTouchListener(onTouchListener);
+    binding.listView.setOnTouchListener(onTouchListener);
     //    listView.setOnDragListener(new MainFragmentDragListener());
     mToolbarContainer.setOnTouchListener(onTouchListener);
 
-    mSwipeRefreshLayout = rootView.findViewById(R.id.activity_main_swipe_refresh_layout);
-
-    mSwipeRefreshLayout.setOnRefreshListener(() -> updateList(true));
+    binding.activityMainSwipeRefreshLayout.setOnRefreshListener(() -> updateList(true));
 
     // String itemsstring = res.getString(R.string.items);// TODO: 23/5/2017 use or delete
     mToolbarContainer.setBackgroundColor(
@@ -256,14 +251,14 @@ public class MainFragment extends Fragment
     getMainActivity().getAppbar().getBottomBar().setClickListener();
 
     if (utilsProvider.getAppTheme().equals(AppTheme.LIGHT) && !mainFragmentViewModel.isList()) {
-      listView.setBackgroundColor(Utils.getColor(getContext(), R.color.grid_background_light));
+      binding.listView.setBackgroundColor(Utils.getColor(getContext(), R.color.grid_background_light));
     } else {
-      listView.setBackgroundDrawable(null);
+      binding.listView.setBackgroundDrawable(null);
     }
-    listView.setHasFixedSize(true);
+    binding.listView.setHasFixedSize(true);
     if (mainFragmentViewModel.isList()) {
       mLayoutManager = new CustomScrollLinearLayoutManager(getContext());
-      listView.setLayoutManager(mLayoutManager);
+      binding.listView.setLayoutManager(mLayoutManager);
     } else {
       if (mainFragmentViewModel.getColumns() == null)
         mLayoutManagerGrid = new CustomScrollGridLayoutManager(getActivity(), 3);
@@ -271,17 +266,17 @@ public class MainFragment extends Fragment
         mLayoutManagerGrid =
             new CustomScrollGridLayoutManager(getActivity(), mainFragmentViewModel.getColumns());
       setGridLayoutSpanSizeLookup(mLayoutManagerGrid);
-      listView.setLayoutManager(mLayoutManagerGrid);
+      binding.listView.setLayoutManager(mLayoutManagerGrid);
     }
     // use a linear layout manager
     // View footerView = getActivity().getLayoutInflater().inflate(R.layout.divider, null);// TODO:
     // 23/5/2017 use or delete
     dividerItemDecoration =
         new DividerItemDecoration(requireActivity(), false, getBoolean(PREFERENCE_SHOW_DIVIDERS));
-    listView.addItemDecoration(dividerItemDecoration);
-    mSwipeRefreshLayout.setColorSchemeColors(mainFragmentViewModel.getAccentColor());
+    binding.listView.addItemDecoration(dividerItemDecoration);
+    binding.activityMainSwipeRefreshLayout.setColorSchemeColors(mainFragmentViewModel.getAccentColor());
     DefaultItemAnimator animator = new DefaultItemAnimator();
-    listView.setItemAnimator(animator);
+    binding.listView.setItemAnimator(animator);
     mToolbarContainer.getViewTreeObserver().addOnGlobalLayoutListener(this);
     loadViews();
   }
@@ -295,10 +290,14 @@ public class MainFragment extends Fragment
     fragmentManager.putFragment(outState, KEY_FRAGMENT_MAIN, this);
   }
 
+  public SwipeRefreshLayout getSwipeRefreshLayout() {
+    return binding.activityMainSwipeRefreshLayout;
+  }
+
   public void stopAnimation() {
     if ((!adapter.stoppedAnimation)) {
-      for (int j = 0; j < listView.getChildCount(); j++) {
-        View v = listView.getChildAt(j);
+      for (int j = 0; j < binding.listView.getChildCount(); j++) {
+        View v = binding.listView.getChildAt(j);
         if (v != null) v.clearAnimation();
       }
     }
@@ -332,7 +331,7 @@ public class MainFragment extends Fragment
     if (utilsProvider.getAppTheme().equals(AppTheme.LIGHT)) {
 
       // will always be grid, set alternate white background
-      listView.setBackgroundColor(Utils.getColor(getContext(), R.color.grid_background_light));
+      binding.listView.setBackgroundColor(Utils.getColor(getContext(), R.color.grid_background_light));
     }
 
     if (mLayoutManagerGrid == null)
@@ -342,8 +341,8 @@ public class MainFragment extends Fragment
         mLayoutManagerGrid =
             new CustomScrollGridLayoutManager(getActivity(), mainFragmentViewModel.getColumns());
     setGridLayoutSpanSizeLookup(mLayoutManagerGrid);
-    listView.setLayoutManager(mLayoutManagerGrid);
-    listView.clearOnScrollListeners();
+    binding.listView.setLayoutManager(mLayoutManagerGrid);
+    binding.listView.clearOnScrollListeners();
     mainFragmentViewModel.setAdapterListItems(null);
     mainFragmentViewModel.setIconList(null);
     adapter = null;
@@ -354,12 +353,12 @@ public class MainFragment extends Fragment
 
     if (utilsProvider.getAppTheme().equals(AppTheme.LIGHT)) {
 
-      listView.setBackgroundDrawable(null);
+      binding.listView.setBackgroundDrawable(null);
     }
 
     if (mLayoutManager == null) mLayoutManager = new CustomScrollLinearLayoutManager(getActivity());
-    listView.setLayoutManager(mLayoutManager);
-    listView.clearOnScrollListeners();
+    binding.listView.setLayoutManager(mLayoutManager);
+    binding.listView.clearOnScrollListeners();
     mainFragmentViewModel.setAdapterListItems(null);
     mainFragmentViewModel.setIconList(null);
     adapter = null;
@@ -583,7 +582,7 @@ public class MainFragment extends Fragment
       getMainActivity().getActionModeHelper().getActionMode().finish();
     }
 
-    mSwipeRefreshLayout.setRefreshing(true);
+    binding.activityMainSwipeRefreshLayout.setRefreshing(true);
 
     if (loadFilesListTask != null && loadFilesListTask.getStatus() == AsyncTask.Status.RUNNING) {
       LOG.warn("Existing load list task running, cancel current");
@@ -613,7 +612,7 @@ public class MainFragment extends Fragment
             getBoolean(PREFERENCE_SHOW_HIDDENFILES),
             forceReload,
             (data) -> {
-              mSwipeRefreshLayout.setRefreshing(false);
+              binding.activityMainSwipeRefreshLayout.setRefreshing(false);
               if (data != null && data.second != null) {
                 boolean isPathLayoutGrid =
                     DataUtils.getInstance().getListOrGridForPath(providedPath, DataUtils.LIST)
@@ -687,19 +686,17 @@ public class MainFragment extends Fragment
   }
 
   void initNoFileLayout() {
-    nofilesview = rootView.findViewById(R.id.nofilelayout);
-    nofilesview.setColorSchemeColors(mainFragmentViewModel.getAccentColor());
-    nofilesview.setOnRefreshListener(
+    binding.nofilelayout.setColorSchemeColors(mainFragmentViewModel.getAccentColor());
+    binding.nofilelayout.setOnRefreshListener(
         () -> {
           loadlist(
               (mainFragmentViewModel.getCurrentPath()),
               false,
               mainFragmentViewModel.getOpenMode(),
               false);
-          nofilesview.setRefreshing(false);
+          binding.nofilelayout.setRefreshing(false);
         });
-    nofilesview
-        .findViewById(R.id.no_files_relative)
+    binding.noFilesRelative
         .setOnKeyListener(
             (v, keyCode, event) -> {
               if (event.getAction() == KeyEvent.ACTION_DOWN) {
@@ -714,14 +711,13 @@ public class MainFragment extends Fragment
               return true;
             });
     if (utilsProvider.getAppTheme().equals(AppTheme.LIGHT)) {
-      ((ImageView) nofilesview.findViewById(R.id.image))
-          .setColorFilter(Color.parseColor("#666666"));
+      binding.image.setColorFilter(Color.parseColor("#666666"));
     } else if (utilsProvider.getAppTheme().equals(AppTheme.BLACK)) {
-      nofilesview.setBackgroundColor(Utils.getColor(getContext(), android.R.color.black));
-      ((TextView) nofilesview.findViewById(R.id.nofiletext)).setTextColor(Color.WHITE);
+      binding.nofilelayout.setBackgroundColor(Utils.getColor(getContext(), android.R.color.black));
+      binding.nofiletext.setTextColor(Color.WHITE);
     } else {
-      nofilesview.setBackgroundColor(Utils.getColor(getContext(), R.color.holo_dark_background));
-      ((TextView) nofilesview.findViewById(R.id.nofiletext)).setTextColor(Color.WHITE);
+      binding.nofilelayout.setBackgroundColor(Utils.getColor(getContext(), R.color.holo_dark_background));
+      binding.nofiletext.setTextColor(Color.WHITE);
     }
   }
 
@@ -777,13 +773,13 @@ public class MainFragment extends Fragment
       }
 
       if (mainFragmentViewModel.getListElements().size() == 0 && !results) {
-        nofilesview.setVisibility(View.VISIBLE);
-        listView.setVisibility(View.GONE);
-        mSwipeRefreshLayout.setEnabled(false);
+        binding.nofilelayout.setVisibility(View.VISIBLE);
+        binding.listView.setVisibility(View.GONE);
+        binding.activityMainSwipeRefreshLayout.setEnabled(false);
       } else {
-        mSwipeRefreshLayout.setEnabled(true);
-        nofilesview.setVisibility(View.GONE);
-        listView.setVisibility(View.VISIBLE);
+        binding.activityMainSwipeRefreshLayout.setEnabled(true);
+        binding.nofilelayout.setVisibility(View.GONE);
+        binding.listView.setVisibility(View.VISIBLE);
       }
 
       if (grid && mainFragmentViewModel.isList()) {
@@ -801,12 +797,12 @@ public class MainFragment extends Fragment
                 this,
                 utilsProvider,
                 sharedPref,
-                listView,
+                binding.listView,
                 listElements,
                 requireContext(),
                 grid);
       } else {
-        adapter.setItems(listView, mainFragmentViewModel.getListElements());
+        adapter.setItems(binding.listView, mainFragmentViewModel.getListElements());
       }
 
       mainFragmentViewModel.setStopAnims(true);
@@ -815,10 +811,10 @@ public class MainFragment extends Fragment
         DataUtils.getInstance().addHistoryFile(mainFragmentViewModel.getCurrentPath());
       }
 
-      listView.setAdapter(adapter);
+      binding.listView.setAdapter(adapter);
 
       if (!mainFragmentViewModel.getAddHeader()) {
-        listView.removeItemDecoration(dividerItemDecoration);
+        binding.listView.removeItemDecoration(dividerItemDecoration);
         mainFragmentViewModel.setAddHeader(true);
       }
 
@@ -826,7 +822,7 @@ public class MainFragment extends Fragment
         dividerItemDecoration =
             new DividerItemDecoration(
                 requireMainActivity(), true, getBoolean(PREFERENCE_SHOW_DIVIDERS));
-        listView.addItemDecoration(dividerItemDecoration);
+        binding.listView.addItemDecoration(dividerItemDecoration);
         mainFragmentViewModel.setAddHeader(false);
       }
 
@@ -843,9 +839,9 @@ public class MainFragment extends Fragment
       requireMainActivity().updatePaths(mainFragmentViewModel.getNo());
       requireMainActivity().showFab();
       requireMainActivity().getAppbar().getAppbarLayout().setExpanded(true);
-      listView.stopScroll();
+      binding.listView.stopScroll();
       fastScroller.setRecyclerView(
-          listView,
+          binding.listView,
           mainFragmentViewModel.isList()
               ? 1
               : (mainFragmentViewModel.getColumns() == 0
@@ -866,7 +862,7 @@ public class MainFragment extends Fragment
 
       startFileObserver();
 
-      listView.post(
+      binding.listView.post(
           () -> {
             String fileName = requireMainActivity().getScrollToFileName();
 
@@ -877,7 +873,7 @@ public class MainFragment extends Fragment
                       getViewLifecycleOwner(),
                       scrollPosition -> {
                         if (scrollPosition != -1)
-                          listView.scrollToPosition(
+                          binding.listView.scrollToPosition(
                               Math.min(scrollPosition + 4, adapter.getItemCount() - 1));
                         adapter.notifyItemChanged(scrollPosition);
                       });
@@ -942,7 +938,7 @@ public class MainFragment extends Fragment
           customFileObserver =
               new CustomFileObserver(
                   mainFragmentViewModel.getCurrentPath(),
-                  new FileHandler(this, listView, getBoolean(PREFERENCE_SHOW_THUMB)));
+                  new FileHandler(this, binding.listView, getBoolean(PREFERENCE_SHOW_THUMB)));
           customFileObserver.startWatching();
         }
         break;
@@ -1008,7 +1004,7 @@ public class MainFragment extends Fragment
   }
 
   public void computeScroll() {
-    View vi = listView.getChildAt(0);
+    View vi = binding.listView.getChildAt(0);
     int top = (vi == null) ? 0 : vi.getTop();
     int index;
     if (mainFragmentViewModel.isList()) index = mLayoutManager.findFirstVisibleItemPosition();
@@ -1377,6 +1373,12 @@ public class MainFragment extends Fragment
   }
 
   @Override
+  public void onDestroyView() {
+    super.onDestroyView();
+    binding = null;
+  }
+
+  @Override
   public void onDestroy() {
     super.onDestroy();
 
@@ -1450,7 +1452,7 @@ public class MainFragment extends Fragment
   // adds search results based on result boolean. If false, the adapter is initialised with initial
   // values, if true, new values are added to the adapter.
   public void addSearchResult(@NonNull HybridFileParcelable hybridFileParcelable, String query) {
-    if (listView == null) {
+    if (binding == null) {
       return;
     }
 
@@ -1522,9 +1524,9 @@ public class MainFragment extends Fragment
   public void initTopAndEmptyAreaDragListeners(boolean destroy) {
     if (destroy) {
       mToolbarContainer.setOnDragListener(null);
-      listView.stopScroll();
-      listView.setOnDragListener(null);
-      nofilesview.setOnDragListener(null);
+      binding.listView.stopScroll();
+      binding.listView.setOnDragListener(null);
+      binding.nofilelayout.setOnDragListener(null);
     } else {
       mToolbarContainer.setOnDragListener(
           new TabFragmentBottomDragListener(
@@ -1536,28 +1538,28 @@ public class MainFragment extends Fragment
                 stopSmoothScrollListView();
                 return null;
               }));
-      listView.setOnDragListener(
+      binding.listView.setOnDragListener(
           new RecyclerAdapterDragListener(
               adapter, null, mainFragmentViewModel.getDragAndDropPreference(), this));
-      nofilesview.setOnDragListener(
+      binding.nofilelayout.setOnDragListener(
           new RecyclerAdapterDragListener(
               adapter, null, mainFragmentViewModel.getDragAndDropPreference(), this));
     }
   }
 
   public void smoothScrollListView(boolean upDirection) {
-    if (listView != null) {
+    if (binding != null) {
       if (upDirection) {
-        listView.smoothScrollToPosition(0);
+        binding.listView.smoothScrollToPosition(0);
       } else {
-        listView.smoothScrollToPosition(mainFragmentViewModel.getAdapterListItems().size());
+        binding.listView.smoothScrollToPosition(mainFragmentViewModel.getAdapterListItems().size());
       }
     }
   }
 
   public void stopSmoothScrollListView() {
-    if (listView != null) {
-      listView.stopScroll();
+    if (binding != null) {
+      binding.listView.stopScroll();
     }
   }
 
@@ -1592,7 +1594,7 @@ public class MainFragment extends Fragment
   @Override
   public void onGlobalLayout() {
     if (mainFragmentViewModel.getColumns() == null) {
-      int screenWidth = listView.getWidth();
+      int screenWidth = binding.listView.getWidth();
       int dpToPx = Utils.dpToPx(requireContext(), 115);
       if (dpToPx == 0) {
         // HACK to fix a crash see #3249
@@ -1648,10 +1650,10 @@ public class MainFragment extends Fragment
       viewHolder.baseItemView.getLocationOnScreen(location);
       LOG.info("Current x and y " + location[0] + " " + location[1]);
       if (location[1] < requireMainActivity().getAppbar().getAppbarLayout().getHeight()) {
-        listView.scrollToPosition(Math.max(viewHolder.getAdapterPosition() - 5, 0));
+        binding.listView.scrollToPosition(Math.max(viewHolder.getAdapterPosition() - 5, 0));
       } else if (location[1] + viewHolder.baseItemView.getHeight()
           > requireContext().getResources().getDisplayMetrics().heightPixels) {
-        listView.scrollToPosition(
+        binding.listView.scrollToPosition(
             Math.min(viewHolder.getAdapterPosition() + 5, adapter.getItemCount() - 1));
       }
     } catch (IndexOutOfBoundsException e) {
