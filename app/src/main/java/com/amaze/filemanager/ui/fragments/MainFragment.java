@@ -110,7 +110,6 @@ import com.amaze.filemanager.ui.theme.AppTheme;
 import com.amaze.filemanager.ui.views.CustomScrollGridLayoutManager;
 import com.amaze.filemanager.ui.views.CustomScrollLinearLayoutManager;
 import com.amaze.filemanager.ui.views.DividerItemDecoration;
-import com.amaze.filemanager.ui.views.FastScroller;
 import com.amaze.filemanager.ui.views.WarnableTextInputValidator;
 import com.amaze.filemanager.utils.BottomBarButtonPath;
 import com.amaze.filemanager.utils.DataUtils;
@@ -154,8 +153,6 @@ public class MainFragment extends Fragment
 
   private UtilitiesProvider utilsProvider;
   private final HashMap<String, Bundle> scrolls = new HashMap<>();
-  private View rootView;
-  private FastScroller fastScroller;
   private CustomFileObserver customFileObserver;
 
   // defines the current visible tab, default either 0 or 1
@@ -209,8 +206,7 @@ public class MainFragment extends Fragment
   public View onCreateView(
           @NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
     binding = MainFragBinding.inflate(inflater);
-    rootView = binding.getRoot();
-    return rootView;
+    return binding.getRoot();
   }
 
   @Override
@@ -219,8 +215,7 @@ public class MainFragment extends Fragment
     super.onViewCreated(view, savedInstanceState);
     mainFragmentViewModel = new ViewModelProvider(this).get(MainFragmentViewModel.class);
     mToolbarContainer = requireMainActivity().getAppbar().getAppbarLayout();
-    fastScroller = rootView.findViewById(R.id.fastscroll);
-    fastScroller.setPressedHandleColor(mainFragmentViewModel.getAccentColor());
+    binding.fastscroll.setPressedHandleColor(mainFragmentViewModel.getAccentColor());
     View.OnTouchListener onTouchListener =
         (view1, motionEvent) -> {
           if (adapter != null && mainFragmentViewModel.getStopAnims()) {
@@ -840,7 +835,7 @@ public class MainFragment extends Fragment
       requireMainActivity().showFab();
       requireMainActivity().getAppbar().getAppbarLayout().setExpanded(true);
       binding.listView.stopScroll();
-      fastScroller.setRecyclerView(
+      binding.fastscroll.setRecyclerView(
           binding.listView,
           mainFragmentViewModel.isList()
               ? 1
@@ -850,9 +845,9 @@ public class MainFragment extends Fragment
                   : mainFragmentViewModel.getColumns());
       mToolbarContainer.addOnOffsetChangedListener(
           (appBarLayout, verticalOffset) -> {
-            fastScroller.updateHandlePosition(verticalOffset, 112);
+            binding.fastscroll.updateHandlePosition(verticalOffset, 112);
           });
-      fastScroller.registerOnTouchListener(
+      binding.fastscroll.registerOnTouchListener(
           () -> {
             if (mainFragmentViewModel.getStopAnims() && adapter != null) {
               stopAnimation();
