@@ -1370,6 +1370,7 @@ public class MainFragment extends Fragment
   @Override
   public void onDestroyView() {
     super.onDestroyView();
+    binding.listView.setAdapter(null);
     binding = null;
   }
 
