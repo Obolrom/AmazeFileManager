@@ -21,8 +21,6 @@
 package com.amaze.filemanager.ui.fragments;
 
 import static android.os.Build.VERSION.SDK_INT;
-import static android.os.Build.VERSION_CODES.JELLY_BEAN;
-import static android.os.Build.VERSION_CODES.JELLY_BEAN_MR2;
 import static android.os.Build.VERSION_CODES.Q;
 import static com.amaze.filemanager.filesystem.FileProperties.ANDROID_DATA_DIRS;
 import static com.amaze.filemanager.filesystem.FileProperties.ANDROID_DEVICE_DATA_DIRS;
@@ -897,16 +895,13 @@ public class MainFragment extends Fragment
    * pending opened files in application cache
    */
   private void resumeDecryptOperations() {
-    if (SDK_INT >= JELLY_BEAN_MR2) {
-      (requireMainActivity())
-          .registerReceiver(
-              decryptReceiver, new IntentFilter(EncryptDecryptUtils.DECRYPT_BROADCAST));
-      if (!mainFragmentViewModel.isEncryptOpen()
-          && !Utils.isNullOrEmpty(mainFragmentViewModel.getEncryptBaseFiles())) {
-        // we've opened the file and are ready to delete it
-        new DeleteTask(requireMainActivity()).execute(mainFragmentViewModel.getEncryptBaseFiles());
-        mainFragmentViewModel.setEncryptBaseFiles(new ArrayList<>());
-      }
+    (requireMainActivity())
+        .registerReceiver(decryptReceiver, new IntentFilter(EncryptDecryptUtils.DECRYPT_BROADCAST));
+    if (!mainFragmentViewModel.isEncryptOpen()
+        && !Utils.isNullOrEmpty(mainFragmentViewModel.getEncryptBaseFiles())) {
+      // we've opened the file and are ready to delete it
+      new DeleteTask(requireMainActivity()).execute(mainFragmentViewModel.getEncryptBaseFiles());
+      mainFragmentViewModel.setEncryptBaseFiles(new ArrayList<>());
     }
   }
 
@@ -1241,9 +1236,7 @@ public class MainFragment extends Fragment
       customFileObserver.stopWatching();
     }
 
-    if (SDK_INT >= JELLY_BEAN_MR2) {
-      (requireActivity()).unregisterReceiver(decryptReceiver);
-    }
+    (requireActivity()).unregisterReceiver(decryptReceiver);
   }
 
   public ArrayList<LayoutElementParcelable> addToSmb(
@@ -1606,11 +1599,7 @@ public class MainFragment extends Fragment
     /*if (!mainFragmentViewModel.isList()) {
       loadViews();
     }*/
-    if (android.os.Build.VERSION.SDK_INT >= JELLY_BEAN) {
-      mToolbarContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-    } else {
-      mToolbarContainer.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-    }
+    mToolbarContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
   }
 
   public @Nullable MainFragmentViewModel getMainFragmentViewModel() {
